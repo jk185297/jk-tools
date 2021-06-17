@@ -41,6 +41,5 @@ if ($null -ne (Get-Command "rm.exe" -ErrorAction SilentlyContinue)) {
 # Replace cd alias with pushd instead of chdir
 # Remove-Item alias:cd -ErrorAction SilentlyContinue
 # New-Alias cd Push-Location
-# Remove-Item alias:ll -ErrorAction SilentlyContinue
-# New-Alias ll Get-ChildItem
 
+New-Alias ll Get-ChildItem

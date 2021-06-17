@@ -106,7 +106,6 @@
 [fetch]
 	prune = true
 [pull]
-	rebase = true
 	prune = true
 [diff]
 	tool = bc3
@@ -125,3 +124,8 @@
 	trustExitCode = true
 [http]
 	sslbackend = schannel
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
