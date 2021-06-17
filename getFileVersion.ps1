@@ -1,0 +1,1 @@
+get-childitem $pwd\* -recurse -include *.dll,*.exe | foreach-object { "{0}`t{1}" -f $_.Name, [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_).FileVersion }

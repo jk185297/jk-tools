@@ -1,0 +1,127 @@
+[alias]
+	a = add -A
+	ac = !git add . && git commit -am
+	al = config --get-regexp alias
+	amend = commit --amend
+	b = branch -vv
+	bnt = !git branch -vv | grep -v origin
+	bl = blame -w -M -C
+	bra = branch -rav
+	ba = branch -avv
+	bdel = "!f() { git branch -D $1; git push origin -d $1; }; f"
+	branches = branch -rav
+	c = checkout
+	cb = checkout -b
+	changed = status -sb
+	cm = !git add -A && git commit -m
+	dt = difftool --dir-diff
+	diff-branches = log --left-right --graph --cherry-pick --oneline
+	f = fetch
+	fdiff = diff --name-status
+	filelog = log -u
+	h = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue) [%an]%Creset' --abbrev-commit --date=relative
+	l = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue) [%an]%Creset' --abbrev-commit --date=relative
+	last = log -p --max-count=1 --word-diff
+	lastref = rev-parse --short HEAD
+	lasttag = describe --tags --abbrev=0
+	lc = log --stat --summary
+	lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	lga = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative --all
+	lf = log --oneline --max-count=25 --name-status
+	# ll = log --pretty=oneline --abbrev-commit --max-count=25
+	# ll = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue) [%an]%Creset' --abbrev-commit --max-count=25
+	# ll = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cd) %C(bold blue) [%an]%Creset' --abbrev-commit --max-count=25 --date=relative
+	ll = l --max-count=25
+	# ll = log --oneline --max-count=25
+	ma = merge --abort
+	mt = mergetool
+	pa = push -u origin --all
+	parent = "!git show-branch | grep '*' | grep -v \"$(git rev-parse --abbrev-ref HEAD)\" | head -n1 | sed 's/.*\\[\\(.*\\)\\].*/\\1/' | sed 's/[\\^~].*//' #"
+	pick = add -p
+	pom = push origin master
+	pos = push origin source
+	pr = pull --rebase
+	p = pull --prune
+	pub = !sourceBranch=$(git rev-parse --abbrev-ref HEAD) && git push -u origin $sourceBranch
+	r = rebase --interactive HEAD~10
+	ra = rebase --abort
+	rao = remote add origin
+	rbd = rebase develop
+	rbdcl = rebase develop -s recursive -X ours
+	rbdkl = rebase develop -s recursive -X theirs
+	rbcl = rebase -s recursive -X ours
+	rbkl = rebase -s recursive -X theirs
+	rc = rebase --continue
+	remotes = remote -v show
+	s = -p status
+	save = !git add -A && git commit -m 'SAVEPOINT'
+	pave = !git save && git push
+	sl = stash list
+	ss = -p status -s
+	st = stash
+	stage = add
+	standup = !me=$(git config --global --get user.name) && git log --since yesterday --oneline --author \"$me\"
+	stats = diff --stat
+	stl = stash list
+	sync = !git fetch upstream -v && git fetch origin -v && git checkout develop && git merge upstream/develop
+	tl = tag -l -n
+	tdel = "!f() { git tag --delete $1; git push --delete origin $1; }; f"
+	undo = reset HEAD~1 --mixed
+	undo-commit = reset --soft HEAD~1
+	unstage = reset HEAD
+	# v = tag -l "v19.*" -n
+	v = !git tag -n --sort=-refname | head -n 20 | sort
+	wdiff = diff --word-diff
+	who = shortlog -s -e --
+	wipe = !git add -A && git commit -qm 'WIPE SAVEPOINT' && git reset HEAD~1 --hard
+	branch = auto
+	diff = auto
+	status = auto
+[color "branch"]
+	current = yellow reverse
+	local = yellow
+	remote = green
+[color "diff"]
+	frag = magenta bold
+	meta = yellow bold
+	new = green bold
+	old = red bold
+[color "status"]
+	added = yellow
+	changed = green
+	untracked = cyan
+[core]
+	autocrlf = true
+	editor = vim
+[gui]
+[push]
+	default = upstream
+[url "https://"]
+	insteadOf = git://
+[user]
+	email = jeff.knowlton@ncr.com
+	name = Jeff Knowlton
+[brance]
+	autosetuprebase = always
+[fetch]
+	prune = true
+[pull]
+	rebase = true
+	prune = true
+[diff]
+	tool = bc3
+[difftool "bc3"]
+	path = c:/Program Files/Beyond Compare 4/bcomp.exe
+	trustExitCode = true
+[merge]
+	tool = bc3
+[mergetool "bc3"]
+	path = c:/Program Files/Beyond Compare 4/bcomp.exe
+	trustExitCode = true
+[difftool "sourcetree"]
+	cmd = '' \"$LOCAL\" \"$REMOTE\"
+[mergetool "sourcetree"]
+	cmd = "'' "
+	trustExitCode = true
+[http]
+	sslbackend = schannel
