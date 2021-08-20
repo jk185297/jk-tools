@@ -8,10 +8,10 @@ choco feature enable -n=allowGlobalConfirmation
 choco feature enable -n=failOnAutoUninstaller
 choco feature enable -n=useRememberedArgumentsForUpgrades
 REM choco install sysinternals
-REM choco install notepadplusplus --x86
-REM choco install vscode
+choco install notepadplusplus --x86
+choco install vscode
 REM choco install conemu
-REM choco install nuget.commandline
+choco install nuget.commandline
 REM choco install sqlserver-cmdlineutils --version=14.0
 REM choco install mssqlserver2014-sqllocaldb
 REM choco install sql-server-management-studio
@@ -24,7 +24,7 @@ REM Install-Module -Name psPAS
 
 
 
-REM choco install beyondcompare
+choco install beyondcompare
 goto :eof
 
 
