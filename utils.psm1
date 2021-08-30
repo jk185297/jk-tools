@@ -1,5 +1,34 @@
 # utility functions
 
+function IsAdmin {
+    return ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
+function ToAdmin {
+    if ($Host.Version.Major -gt 1) { $Host.Runspace.ThreadOptions = "ReuseThread" }
+    if (-not (IsAdmin)) {
+        $currentDirFullPath = Get-Location
+
+        # Handle this differently if powershell core
+        if ($Host.Version.Major -ge 7) {
+            $newProcess = new-object System.Diagnostics.ProcessStartInfo "pwsh";
+            $newProcess.Arguments = "-NoExit -WorkingDirectory $currentDirFullPath"
+        }
+        else {
+            $newProcess = new-object System.Diagnostics.ProcessStartInfo "powershell";
+            $newProcess.Arguments = "-NoExit -Command `"cd $currentDirFullPath`""
+        }
+
+        $newProcess.Verb = "runas";
+        [System.Diagnostics.Process]::Start($newProcess);
+
+        exit
+    }else {
+        Write-Host "Already running in elevated mode"
+    }
+    
+}
+
 function Get-ProjectUrl {
     param (
         [string]$projectPath
@@ -11,8 +40,36 @@ function Get-ProjectUrl {
     return $projectUrl
 }
 
+function Get-DotNetVersion {
+    param (
+        [string]$filePath
+    )
+    $pathToDll = Resolve-Path $filePath
+    [byte[]]$dllByteArray = [System.IO.File]::ReadAllBytes($pathToDll)
+    $result = [Reflection.Assembly]::ReflectionOnlyLoad($dllByteArray).CustomAttributes | Where-Object { $_.AttributeType.Name -eq "TargetFrameworkAttribute" } | Select-Object -ExpandProperty ConstructorArguments | Select-Object -ExpandProperty value
+    return $result
+}
+
 function IsCorrectFramework {
     return (Get-ItemProperty "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full").Release -ge 394802
+}
+
+function Get-TargetFrameworkVersions () {
+    Get-ChildItem -Filter *.*proj -Recurse | ForEach-Object {
+        $csprojPath = $_.FullName
+        $targetFramework = Select-Xml -Path $csprojPath -Namespace @{msb = "http://schemas.microsoft.com/developer/msbuild/2003" } -XPath "//msb:TargetFrameworkVersion" |
+        Select-Object -Property @{Name = "TargetFrameworkVersion"; Expression = { $_.Node.InnerXml } } |
+        Select-Object -ExpandProperty TargetFrameworkVersion
+        $targetFrameworkForNuget = $targetFramework.Replace(".", "").Replace("v", "net")
+
+        Write-Output "$csprojPath ($targetFramework) [$targetFrameworkForNuget]"
+    }
+    # Select-Xml -Namespace @{msb = "http://schemas.microsoft.com/developer/msbuild/2003" } -XPath "//msb:TargetFrameworkVersion" |
+    # Select-Object -Property @{Name = "TargetFrameworkVersion"; Expression = { $_.Node.InnerXml } } |
+    # Select-Object -ExpandProperty TargetFrameworkVersion
+    # Select-Object -ExpandProperty TargetFrameworkVersion |
+    # Group-Object
+
 }
 
 function Get-LatestVersion {
@@ -38,23 +95,6 @@ function Find-File () {
 }
 New-Alias ff Find-File
 
-function Get-TargetFrameworkVersions () {
-    Get-ChildItem -Filter *.*proj -Recurse | ForEach-Object {
-        $csprojPath = $_.FullName
-        $targetFramework = Select-Xml -Path $csprojPath -Namespace @{msb = "http://schemas.microsoft.com/developer/msbuild/2003" } -XPath "//msb:TargetFrameworkVersion" |
-        Select-Object -Property @{Name = "TargetFrameworkVersion"; Expression = { $_.Node.InnerXml } } |
-        Select-Object -ExpandProperty TargetFrameworkVersion
-        $targetFrameworkForNuget = $targetFramework.Replace(".", "").Replace("v", "net")
-
-        Write-Output "$csprojPath ($targetFramework) [$targetFrameworkForNuget]"
-    }
-    # Select-Xml -Namespace @{msb = "http://schemas.microsoft.com/developer/msbuild/2003" } -XPath "//msb:TargetFrameworkVersion" |
-    # Select-Object -Property @{Name = "TargetFrameworkVersion"; Expression = { $_.Node.InnerXml } } |
-    # Select-Object -ExpandProperty TargetFrameworkVersion
-    # Select-Object -ExpandProperty TargetFrameworkVersion |
-    # Group-Object
-
-}
 
 
 function Get-TFCloakStatus () {
@@ -174,13 +214,13 @@ function Get-SolutionFile {
     return $sln
 }
 
-function Start-VS2017 {
-    $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\devenv.exe"
-    $sln = Get-SolutionFile
-    # $sln = $(dir *.sln | select -First 1 | % {$_.FullName})
-    & $devenv $sln
-}
-New-Alias vs17 Start-VS2017
+# function Start-VS2017 {
+#     $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Common7\IDE\devenv.exe"
+#     $sln = Get-SolutionFile
+#     # $sln = $(dir *.sln | select -First 1 | % {$_.FullName})
+#     & $devenv $sln
+# }
+# New-Alias vs17 Start-VS2017
 
 function Start-VS2019 {
     $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
@@ -249,15 +289,15 @@ function Build {
     $params = @()
     $params += "$sln"
     if ($Rebuild) {
-        $params += "/t:rebuild"
+        $params += "-t:rebuild"
     }
     else {
-        $params += "/t:build"
+        $params += "-t:build"
     }
-    $params += "/p:StopOnFirstFailure=true"
-    $params += "/p:configuration=$config"
+    $params += "-p:StopOnFirstFailure=true"
+    $params += "-p:configuration=$config"
     if ($platform) {
-        $params += "/p:platform=`"$platform`""
+        $params += "-p:platform=`"$platform`""
     }
 
     & $cmd $params
@@ -309,15 +349,7 @@ function Set-WindowTitle {
 }
 New-Alias title Set-WindowTitle
 
-function Get-DotNetVersion {
-    param (
-        [string]$filePath
-    )
-    $pathToDll = Resolve-Path $filePath
-    [byte[]]$dllByteArray = [System.IO.File]::ReadAllBytes($pathToDll)
-    $result = [Reflection.Assembly]::ReflectionOnlyLoad($dllByteArray).CustomAttributes | Where-Object { $_.AttributeType.Name -eq "TargetFrameworkAttribute" } | Select-Object -ExpandProperty ConstructorArguments | Select-Object -ExpandProperty value
-    return $result
-}
+
 
 function Get-IISExpress {
     Get-Process -Name iisexpress | Format-Table id, mainwindowtitle -AutoSize
