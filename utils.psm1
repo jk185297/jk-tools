@@ -23,7 +23,8 @@ function ToAdmin {
         [System.Diagnostics.Process]::Start($newProcess);
 
         exit
-    }else {
+    }
+    else {
         Write-Host "Already running in elevated mode"
     }
     
@@ -95,6 +96,22 @@ function Find-File () {
 }
 New-Alias ff Find-File
 
+function Find-FileVersion () {
+    param (
+        [string]$Search = ""
+    )
+    if ($Search) {
+        $results = @()
+        Get-ChildItem -Recurse $($Search) | ForEach-Object { 
+            $results += [PSCustomObject]@{
+                Name = $_.FullName
+                FileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion
+            }
+        }
+        Write-Output $results | Format-Table
+    }
+}
+New-Alias ffv Find-FileVersion
 
 
 function Get-TFCloakStatus () {
