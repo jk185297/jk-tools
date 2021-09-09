@@ -119,7 +119,9 @@ function Get-TFCloakStatus () {
 }
 
 function Get-IpAddress {
-    Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress.StartsWith('10.') } | Select-Object -Property InterfaceAlias, IPAddress
+    # Get-NetIPAddress -AddressFamily IPv4 | Select-Object -Property InterfaceAlias, IPAddress
+    Get-NetIPAddress -AddressFamily IPv4 | Where-Object {-not $_.IPAddress.StartsWith('169.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -Property InterfaceAlias, IPAddress
+    # Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress.StartsWith('10.') } | Select-Object -Property InterfaceAlias, IPAddress
     # [System.Net.Dns]::GetHostAddresses($env:computername) | ? { $_.AddressFamily -eq "InterNetwork" -and $_.IPAddressToString.StartsWith("10.") } | % { $_.IPAddressToString }
     # ([System.Net.Dns]::GetHostAddresses($env:computername)).IPAddressToString | ?{!$_.Contains(":") -and !$_.StartsWith("192")}
     # ((ipconfig) -match "IPv4").split(":")[1].trim();
@@ -242,6 +244,11 @@ function Get-SolutionFile {
 function Start-VS2019 {
     $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
     $sln = Get-SolutionFile
+    if (-not $sln -and (Test-Path './src')) {
+        Push-Location './src'
+        $sln = Get-SolutionFile
+        Pop-Location
+    }
     & $devenv $sln
 }
 New-Alias vs19 Start-VS2019
