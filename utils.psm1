@@ -405,22 +405,38 @@ function Start-Sleep($seconds) {
     Write-Progress -Activity "Sleeping" -Status "Sleeping..." -SecondsRemaining 0 -Completed
 }
 
-function AltDir {
+function Get-NextAltDir {
     $parentDirName = Split-Path -Path (Get-Location).Path
     $currentDirName = Split-Path -Path (Get-Location).Path -Leaf
-    if ($parentDirName.EndsWith("2")) {
-        $parentDirName = $parentDirName -replace ".$"
-        $altDir = Join-Path $parentDirName $currentDirName
+    $parentDirNameLastChar = $parentDirName.Substring($parentDirName.Length - 1)
+    $altDirRoot = $parentDirName
+    [int]$altDirIndex = 1
+    [int]$returnedInt = 0
+    [bool]$result = [int]::TryParse($parentDirNameLastChar, [ref]$returnedInt)
+    if ($result) {
+        $altDirIndex = $returnedInt
+        $altDirRoot = $parentDirName -replace ".$"
     }
-    else {
-        $altDir = Join-Path "$($parentDirName)2" $currentDirName
+    # Check to see if higher altdir exists
+    $propostedHigherAltDir = "$altDirRoot$($altDirIndex + 1)"
+    $nextAltDir = ""
+    $higherAltDirExists = Test-Path $propostedHigherAltDir
+    if ($higherAltDirExists) {
+        $nextAltDir = Join-Path $propostedHigherAltDir $currentDirName
+    }else {
+        $nextAltDir = Join-Path $altDirRoot $currentDirName
     }
 
-    if (-not (Test-Path $altDir)) {
-        return
+    # Check to see if current folder exists in higher altdir
+    if (-not (Test-Path $nextAltDir)) {
+        $nextAltDir = Join-Path $altDirRoot $currentDirName
     }
 
-    Set-Location $altDir
+    return $nextAltDir
+}
+
+function AltDir {
+    Set-Location $(Get-NextAltDir)
 }
 
 function AltBC {
@@ -429,20 +445,7 @@ function AltBC {
         return
     }
 
-    $currentDirFullPath = Get-Location
-    $parentDirName = Split-Path -Path (Get-Location).Path
-    $currentDirName = Split-Path -Path (Get-Location).Path -Leaf
-    if ($parentDirName.EndsWith("2")) {
-        $parentDirName = $parentDirName -replace ".$"
-        $altDir = Join-Path $parentDirName $currentDirName
-    }
-    else {
-        $altDir = Join-Path "$($parentDirName)2" $currentDirName
-    }
+    $altDir = Get-NextAltDir
 
-    if (-not (Test-Path $altDir)) {
-        return
-    }
-
-    . $bc $currentDirFullPath $altDir /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
+    . $bc $(Get-Location) $altDir /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
 }
