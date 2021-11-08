@@ -104,7 +104,7 @@ function Find-FileVersion () {
         $results = @()
         Get-ChildItem -Recurse $($Search) | ForEach-Object { 
             $results += [PSCustomObject]@{
-                Name = $_.FullName
+                Name        = $_.FullName
                 FileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion
             }
         }
@@ -120,7 +120,7 @@ function Get-TFCloakStatus () {
 
 function Get-IpAddress {
     # Get-NetIPAddress -AddressFamily IPv4 | Select-Object -Property InterfaceAlias, IPAddress
-    Get-NetIPAddress -AddressFamily IPv4 | Where-Object {-not $_.IPAddress.StartsWith('169.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -Property InterfaceAlias, IPAddress
+    Get-NetIPAddress -AddressFamily IPv4 | Where-Object { -not $_.IPAddress.StartsWith('169.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -Property InterfaceAlias, IPAddress
     # Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress.StartsWith('10.') } | Select-Object -Property InterfaceAlias, IPAddress
     # [System.Net.Dns]::GetHostAddresses($env:computername) | ? { $_.AddressFamily -eq "InterNetwork" -and $_.IPAddressToString.StartsWith("10.") } | % { $_.IPAddressToString }
     # ([System.Net.Dns]::GetHostAddresses($env:computername)).IPAddressToString | ?{!$_.Contains(":") -and !$_.StartsWith("192")}
@@ -168,7 +168,8 @@ function ensureMsbuildInPath {
         }
         choco install vscommand *> $null
     }
-    $msbuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1 | Split-Path
+    # $msbuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1 | Split-Path
+    $msbuildPath = vswhere -latest -find **\bin\msbuild.exe | Select-Object -Unique -First 1 | Split-Path
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
     $newPath = "$msbuildPath;$path"
     [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
@@ -224,12 +225,18 @@ function Update-NugetPackages {
     }
     # nuget locals all -clear
     # nuget restore -nocache
-    nuget restore
+    $sln = Get-SolutionFile
+    nuget restore $sln
 }
 New-Alias rn Update-NugetPackages
 
 function Get-SolutionFile {
     $sln = $(Get-ChildItem *.sln | Select-Object -First 1 | ForEach-Object { $_.FullName })
+    if (-not $sln -and (Test-Path './src')) {
+        Push-Location './src'
+        $sln = Get-SolutionFile
+        Pop-Location
+    }
     return $sln
 }
 
@@ -244,11 +251,6 @@ function Get-SolutionFile {
 function Start-VS2019 {
     $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
     $sln = Get-SolutionFile
-    if (-not $sln -and (Test-Path './src')) {
-        Push-Location './src'
-        $sln = Get-SolutionFile
-        Pop-Location
-    }
     & $devenv $sln
 }
 New-Alias vs19 Start-VS2019
@@ -269,6 +271,7 @@ function Clean {
 }
 
 function Build {
+    [CmdletBinding(SupportsShouldProcess)]
     param (
         [switch]$Release, 
         [switch]$Rebuild, 
@@ -276,11 +279,11 @@ function Build {
         [switch]$RefreshNugetPackages
     )
 
-    if (-not (Test-Path *.sln)) {
+    $sln = Get-SolutionFile
+    if (-not (Test-Path $sln)) {
         throw "No solutions found to build"
     }
 
-    $sln = Get-SolutionFile
     ensureMsbuildInPath
 
     if ($Clean) {
@@ -289,24 +292,25 @@ function Build {
 
     # Defaults
     $config = "Debug"
-    $platform = "x64"
+    # $platform = "x64"
+    $platform = $null
 
     if ($Release) {
         $config = "Release"
     }
 
     # Search the .sln file for x64 platform, if not found use default
-    if ($platform -eq "x64") {
-        if (Get-Content -Raw $sln | ForEach-Object { $_ -notlike '*x64*' }) {
-            $platform = $null
-        }
-    }
+    # if ($platform -eq "x64") {
+    #     if (Get-Content -Raw $sln | ForEach-Object { $_ -notlike '*x64*' }) {
+    #         $platform = $null
+    #     }
+    # }
 
     if ($RefreshNugetPackages) {
         Update-NugetPackages
     }
     else {
-        nuget restore
+        nuget restore $sln
     }
 
     $cmd = "msbuild.exe"
@@ -324,14 +328,16 @@ function Build {
         $params += "-p:platform=`"$platform`""
     }
 
-    & $cmd $params
-    if ($LastExitCode -ne 0) {
-        throw "Build Failed: $cmd $params"
-    }
-    Write-Output "Build Succeeded: $cmd $params"
-
-    if ($Release -and (Test-Path .\release-build.ps1)) {
-        . .\release-build.ps1
+    if ($PSCmdlet.ShouldProcess($sln, "$cmd $params")) {
+        & $cmd $params
+        if ($LastExitCode -ne 0) {
+            throw "Build Failed: $cmd $params"
+        }
+        Write-Output "Build Succeeded: $cmd $params"
+    
+        if ($Release -and (Test-Path .\release-build.ps1)) {
+            . .\release-build.ps1
+        }
     }
 }
 function gitBash {
@@ -423,7 +429,8 @@ function Get-NextAltDir {
     $higherAltDirExists = Test-Path $propostedHigherAltDir
     if ($higherAltDirExists) {
         $nextAltDir = Join-Path $propostedHigherAltDir $currentDirName
-    }else {
+    }
+    else {
         $nextAltDir = Join-Path $altDirRoot $currentDirName
     }
 
@@ -447,5 +454,5 @@ function AltBC {
 
     $altDir = Get-NextAltDir
 
-    . $bc $(Get-Location) $altDir /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
+    . $bc $altDir $(Get-Location) /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
 }
