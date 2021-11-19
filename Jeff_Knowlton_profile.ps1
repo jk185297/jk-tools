@@ -42,4 +42,4 @@ if ($null -ne (Get-Command "rm.exe" -ErrorAction SilentlyContinue)) {
 # Remove-Item alias:cd -ErrorAction SilentlyContinue
 # New-Alias cd Push-Location
 
-New-Alias ll Get-ChildItem
+# New-Alias ll Get-ChildItem
