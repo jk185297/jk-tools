@@ -324,3 +324,5 @@ ASALocalRun/
 *.binlog
 
 healthcheckStatusParallel.txt
+*.installlog
+*.installstate
