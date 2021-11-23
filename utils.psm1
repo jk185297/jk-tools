@@ -170,8 +170,9 @@ function ensureMsbuildInPath {
     }
     # $msbuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1 | Split-Path
     $msbuildPath = vswhere -latest -find **\bin\msbuild.exe | Select-Object -Unique -First 1 | Split-Path
+    $devenvPath = vswhere -latest -find **\devenv.exe | Select-Object -Unique -First 1 | Split-Path
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
-    $newPath = "$msbuildPath;$path"
+    $newPath = "$msbuildPath;$devenvPath;$path"
     [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
     removeDuplicatesFromPath
     refreshEnv *> $null
