@@ -45,7 +45,15 @@ function Get-DotNetVersion {
     param (
         [string]$filePath
     )
+    if (-not $filePath) {
+        throw "Full path of DLL is required."
+    }
+
     $pathToDll = Resolve-Path $filePath
+    if (-not (Test-Path $pathToDll)) {
+        throw "Unable to find '$pathToDll'"
+    }
+
     [byte[]]$dllByteArray = [System.IO.File]::ReadAllBytes($pathToDll)
     $result = [Reflection.Assembly]::ReflectionOnlyLoad($dllByteArray).CustomAttributes | Where-Object { $_.AttributeType.Name -eq "TargetFrameworkAttribute" } | Select-Object -ExpandProperty ConstructorArguments | Select-Object -ExpandProperty value
     return $result
@@ -88,31 +96,24 @@ function Get-LatestVersion {
 
 function Find-File () {
     param (
-        [string]$Search = ""
-    )
-    if ($Search) {
-        Get-ChildItem -Recurse $($Search) | ForEach-Object { Write-Output "$($_.FullName)" }
-    }
-}
-New-Alias ff Find-File
-
-function Find-FileVersion () {
-    param (
-        [string]$Search = ""
+        [string]$Search = "",
+        [switch]$HideVersion
     )
     if ($Search) {
         $results = @()
         Get-ChildItem -Recurse $($Search) | ForEach-Object { 
-            $results += [PSCustomObject]@{
-                Name        = $_.FullName
-                FileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion
+            $result = [PSCustomObject]@{
+                FullName = $_.FullName
             }
+            if (-not $HideVersion) {
+                $result | Add-Member -NotePropertyName FileVersion -NotePropertyValue ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion)
+            }
+            $results += $result
         }
         Write-Output $results | Format-Table
     }
 }
-New-Alias ffv Find-FileVersion
-
+New-Alias ff Find-File
 
 function Get-TFCloakStatus () {
     tf dir /folders | Where-Object { $_.Contains("$") -and -not $_.Contains(":") } | ForEach-Object { $_.substring(1, $_.length - 1) } | ForEach-Object { tf workfold $_ } | Where-Object { $_.Contains("$") }
@@ -277,7 +278,8 @@ function Build {
         [switch]$Release, 
         [switch]$Rebuild, 
         [switch]$Clean, 
-        [switch]$RefreshNugetPackages
+        [switch]$RefreshNugetPackages,
+        [switch]$Tail
     )
 
     $sln = Get-SolutionFile
@@ -328,8 +330,14 @@ function Build {
     if ($platform) {
         $params += "-p:platform=`"$platform`""
     }
+    if ($Tail) {
+        $params += "-fl"
+    }
 
     if ($PSCmdlet.ShouldProcess($sln, "$cmd $params")) {
+        if ($Tail) {
+            Start-Process -FilePath "C:\NCRDev\jk-tools\baretailpro.exe" -ArgumentList ".\msbuild.log"
+        }
         & $cmd $params
         if ($LastExitCode -ne 0) {
             throw "Build Failed: $cmd $params"
