@@ -97,11 +97,13 @@ function Get-LatestVersion {
 function Find-File () {
     param (
         [string]$Search = "",
-        [switch]$HideVersion
+        [switch]$HideVersion,
+        [switch]$IncludeObjDir
     )
     if ($Search) {
         $results = @()
-        Get-ChildItem -Recurse $($Search) | ForEach-Object { 
+        Get-ChildItem -Recurse $($Search) | 
+        ForEach-Object { 
             $result = [PSCustomObject]@{
                 FullName = $_.FullName
             }
@@ -129,20 +131,20 @@ function Get-IpAddress {
 }
 New-Alias ip Get-IpAddress
 
-function Update-NugetLocal () {
-    param (
-        [string]$Search = ""
-    )
+# function Update-NugetLocal () {
+#     param (
+#         [string]$Search = ""
+#     )
 
-    $searchTerm = "*.nupkg"
+#     $searchTerm = "*.nupkg"
 
-    if ($Search -ne "") {
-        $searchTerm = "*$Search*.nupkg"
-    }
+#     if ($Search -ne "") {
+#         $searchTerm = "*$Search*.nupkg"
+#     }
 
-    Get-ChildItem -Recurse $($searchTerm) | Sort-Object Name | ForEach-Object { nuget add $_.FullName -source \\cr-velocityfs-0.tlr.thomson.com\Velocity\NuGet }
-}
-New-Alias unl Update-NugetLocal
+#     Get-ChildItem -Recurse $($searchTerm) | Sort-Object Name | ForEach-Object { nuget add $_.FullName -source \\cr-velocityfs-0.tlr.thomson.com\Velocity\NuGet }
+# }
+# New-Alias unl Update-NugetLocal
 
 function Get-ModulePathList {
     return $env:PSModulePath.replace(';;', ';').split(';') | Select-Object -Unique;
