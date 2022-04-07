@@ -106,6 +106,7 @@ function Find-File () {
         ForEach-Object { 
             $result = [PSCustomObject]@{
                 FullName = $_.FullName
+                LastWriteTime = $_.LastWriteTime
             }
             if (-not $HideVersion) {
                 $result | Add-Member -NotePropertyName FileVersion -NotePropertyValue ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion)
@@ -159,6 +160,7 @@ function removeDuplicatesFromPath {
     [System.Environment]::SetEnvironmentVariable('PATH', $path, [System.EnvironmentVariableTarget]::User)
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
     [System.Environment]::SetEnvironmentVariable('PATH', $path, [System.EnvironmentVariableTarget]::Machine)
+    refreshEnv *> $null
 }
 
 function ensureMsbuildInPath {
@@ -178,7 +180,6 @@ function ensureMsbuildInPath {
     $newPath = "$msbuildPath;$devenvPath;$path"
     [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
     removeDuplicatesFromPath
-    refreshEnv *> $null
 }
 
 function bfg {
@@ -465,5 +466,5 @@ function AltBC {
 
     $altDir = Get-NextAltDir
 
-    . $bc $altDir $(Get-Location) /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
+    . $bc $altDir $(Get-Location) /filters="-.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\;-.github\;-.githooks\"
 }
