@@ -45,7 +45,15 @@ function Get-DotNetVersion {
     param (
         [string]$filePath
     )
+    if (-not $filePath) {
+        throw "Full path of DLL is required."
+    }
+
     $pathToDll = Resolve-Path $filePath
+    if (-not (Test-Path $pathToDll)) {
+        throw "Unable to find '$pathToDll'"
+    }
+
     [byte[]]$dllByteArray = [System.IO.File]::ReadAllBytes($pathToDll)
     $result = [Reflection.Assembly]::ReflectionOnlyLoad($dllByteArray).CustomAttributes | Where-Object { $_.AttributeType.Name -eq "TargetFrameworkAttribute" } | Select-Object -ExpandProperty ConstructorArguments | Select-Object -ExpandProperty value
     return $result
@@ -88,31 +96,27 @@ function Get-LatestVersion {
 
 function Find-File () {
     param (
-        [string]$Search = ""
-    )
-    if ($Search) {
-        Get-ChildItem -Recurse $($Search) | ForEach-Object { Write-Output "$($_.FullName)" }
-    }
-}
-New-Alias ff Find-File
-
-function Find-FileVersion () {
-    param (
-        [string]$Search = ""
+        [string]$Search = "",
+        [switch]$HideVersion,
+        [switch]$IncludeObjDir
     )
     if ($Search) {
         $results = @()
-        Get-ChildItem -Recurse $($Search) | ForEach-Object { 
-            $results += [PSCustomObject]@{
-                Name        = $_.FullName
-                FileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion
+        Get-ChildItem -Recurse $($Search) | 
+        ForEach-Object { 
+            $result = [PSCustomObject]@{
+                FullName = $_.FullName
+                LastWriteTime = $_.LastWriteTime
             }
+            if (-not $HideVersion) {
+                $result | Add-Member -NotePropertyName FileVersion -NotePropertyValue ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion)
+            }
+            $results += $result
         }
         Write-Output $results | Format-Table
     }
 }
-New-Alias ffv Find-FileVersion
-
+New-Alias ff Find-File
 
 function Get-TFCloakStatus () {
     tf dir /folders | Where-Object { $_.Contains("$") -and -not $_.Contains(":") } | ForEach-Object { $_.substring(1, $_.length - 1) } | ForEach-Object { tf workfold $_ } | Where-Object { $_.Contains("$") }
@@ -128,20 +132,20 @@ function Get-IpAddress {
 }
 New-Alias ip Get-IpAddress
 
-function Update-NugetLocal () {
-    param (
-        [string]$Search = ""
-    )
+# function Update-NugetLocal () {
+#     param (
+#         [string]$Search = ""
+#     )
 
-    $searchTerm = "*.nupkg"
+#     $searchTerm = "*.nupkg"
 
-    if ($Search -ne "") {
-        $searchTerm = "*$Search*.nupkg"
-    }
+#     if ($Search -ne "") {
+#         $searchTerm = "*$Search*.nupkg"
+#     }
 
-    Get-ChildItem -Recurse $($searchTerm) | Sort-Object Name | ForEach-Object { nuget add $_.FullName -source \\cr-velocityfs-0.tlr.thomson.com\Velocity\NuGet }
-}
-New-Alias unl Update-NugetLocal
+#     Get-ChildItem -Recurse $($searchTerm) | Sort-Object Name | ForEach-Object { nuget add $_.FullName -source \\cr-velocityfs-0.tlr.thomson.com\Velocity\NuGet }
+# }
+# New-Alias unl Update-NugetLocal
 
 function Get-ModulePathList {
     return $env:PSModulePath.replace(';;', ';').split(';') | Select-Object -Unique;
@@ -156,6 +160,7 @@ function removeDuplicatesFromPath {
     [System.Environment]::SetEnvironmentVariable('PATH', $path, [System.EnvironmentVariableTarget]::User)
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
     [System.Environment]::SetEnvironmentVariable('PATH', $path, [System.EnvironmentVariableTarget]::Machine)
+    refreshEnv *> $null
 }
 
 function ensureMsbuildInPath {
@@ -175,7 +180,6 @@ function ensureMsbuildInPath {
     $newPath = "$msbuildPath;$devenvPath;$path"
     [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
     removeDuplicatesFromPath
-    refreshEnv *> $null
 }
 
 function bfg {
@@ -277,7 +281,8 @@ function Build {
         [switch]$Release, 
         [switch]$Rebuild, 
         [switch]$Clean, 
-        [switch]$RefreshNugetPackages
+        [switch]$RefreshNugetPackages,
+        [switch]$Tail
     )
 
     $sln = Get-SolutionFile
@@ -328,8 +333,14 @@ function Build {
     if ($platform) {
         $params += "-p:platform=`"$platform`""
     }
+    if ($Tail) {
+        $params += "-fl"
+    }
 
     if ($PSCmdlet.ShouldProcess($sln, "$cmd $params")) {
+        if ($Tail) {
+            Start-Process -FilePath "C:\NCRDev\jk-tools\baretailpro.exe" -ArgumentList ".\msbuild.log"
+        }
         & $cmd $params
         if ($LastExitCode -ne 0) {
             throw "Build Failed: $cmd $params"
@@ -455,5 +466,5 @@ function AltBC {
 
     $altDir = Get-NextAltDir
 
-    . $bc $altDir $(Get-Location) /filters="-.\.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\"
+    . $bc $altDir $(Get-Location) /filters="-.git\;-.vs\;-packages\;-bin\;-obj\;-.bin\;-Publish\;-build\;-.github\;-.githooks\"
 }

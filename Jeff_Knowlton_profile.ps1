@@ -9,11 +9,16 @@ if (Test-Path($ChocolateyProfile)) {
 
 function prompt {
     $origLastExitCode = $LASTEXITCODE
+    $adminPrefix = ""
+    # IsAdmin is a function in utils.psm1
+    if (IsAdmin) {
+        $adminPrefix = "Administrator: "
+    } 
     $leaf = (Split-Path -Leaf $pwd).Split('.')|Select-Object -Last 1
-    $Host.UI.RawUI.WindowTitle = "$leaf"
+    $Host.UI.RawUI.WindowTitle = "$($adminPrefix)$leaf"
     $branch = Get-GitBranch
     if ($null -ne $branch) {
-        $Host.UI.RawUI.WindowTitle = "$leaf [$branch]"
+        $Host.UI.RawUI.WindowTitle = "$($adminPrefix)$leaf [$branch]"
     }
 
     Write-Host $ExecutionContext.SessionState.Path.CurrentLocation -NoNewline

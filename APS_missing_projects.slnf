@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "..\\AlohaCP\\Src\\AlohaPaymentService.sln",
+    "projects": [
+      "Plugins\\OpenEPS\\OpenEPS.ConfigurationMigration\\OpenEPS.ConfigurationMigration.csproj",
+      "Plugins\\OpenEPS\\OpenEPSConfigMigrationUtility\\OpenEPSConfigMigrationUtility.csproj",
+      "Pos\\APSPOSAdapter\\APSPOSAdapter.csproj",
+      "Service\\Reports\\Reports.csproj"
+    ]
+  }
+}
