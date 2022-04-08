@@ -1,0 +1,1 @@
+. C:\BootDrv\Aloha\BIN\iberqs.exe TERM 1
