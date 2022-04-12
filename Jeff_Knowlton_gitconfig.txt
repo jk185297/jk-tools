@@ -99,7 +99,7 @@
 [url "https://"]
 	insteadOf = git://
 [user]
-	email = jeff.knowlton@ncr.com
+	email = jeff@jsknowlton.com
 	name = Jeff Knowlton
 [brance]
 	autosetuprebase = always

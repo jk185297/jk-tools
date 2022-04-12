@@ -1,1 +1,1 @@
-. C:\BootDrv\Aloha\BIN\iber.exe TERM 51
+. C:\BootDrv\Aloha\BIN\iber.exe TERM 1
