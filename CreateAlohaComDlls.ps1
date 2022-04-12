@@ -1,1 +1,0 @@
-msbuild APS.msbuild -t:CreateAlohaComDlls -p:version=1.0.0.0

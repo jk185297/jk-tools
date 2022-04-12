@@ -4,8 +4,8 @@ if (!(Test-Path $iberdir)) {
 }
 
 $iberqs = "$iberdir\bin\iberqs.exe"
-if (!(Test-Path $aloha1)) {
-    throw "$aloha1 does not exist"
+if (!(Test-Path $iberqs)) {
+    throw "$iberqs does not exist"
 }
 
 . $iberqs TERM 1
