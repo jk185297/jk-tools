@@ -8,8 +8,8 @@ choco feature enable -n=allowGlobalConfirmation
 choco feature enable -n=failOnAutoUninstaller
 choco feature enable -n=useRememberedArgumentsForUpgrades
 REM choco install sysinternals
-choco install notepadplusplus --x86
-REM choco install vscode
+choco install notepadplusplus
+choco install vscode
 REM choco install conemu
 REM choco install nuget.commandline
 REM choco install sqlserver-cmdlineutils --version=14.0
@@ -21,15 +21,12 @@ REM powershell.exe -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command
 REM Install psPAS in order to use get-vault-cred.ps1 script
 REM Install-Module -Name psPAS
 
-
-
-
 choco install beyondcompare
 goto :eof
 
 
 :installChoco
-powershell.exe -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+powershell.exe -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
 SET PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin
 refreshenv
 exit /b

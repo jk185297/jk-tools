@@ -96,24 +96,26 @@ function Get-LatestVersion {
 
 function Find-File () {
     param (
-        [string]$Search = "",
-        [switch]$HideVersion,
-        [switch]$IncludeObjDir
+        [string]$Search = ""
     )
+    
     if ($Search) {
+        $start = Get-Date
         $results = @()
         Get-ChildItem -Recurse $($Search) | 
         ForEach-Object { 
             $result = [PSCustomObject]@{
                 FullName = $_.FullName
                 LastWriteTime = $_.LastWriteTime
-            }
-            if (-not $HideVersion) {
-                $result | Add-Member -NotePropertyName FileVersion -NotePropertyValue ([System.Diagnostics.FileVersionInfo]::GetVersionInfo($_.FullName).FileVersion)
+                Length = $_.Length
+                FileVersion = $_.VersionInfo.FileVersion
             }
             $results += $result
         }
         Write-Output $results | Format-Table
+        $end = Get-Date
+        $elapsed = $($end - $start).ToString("hh\:mm\:ss\.ff")
+        Write-Output "Elapsed = $elapsed"
     }
 }
 New-Alias ff Find-File
@@ -421,6 +423,10 @@ function Start-Sleep($seconds) {
         [System.Threading.Thread]::Sleep(500)
     }
     Write-Progress -Activity "Sleeping" -Status "Sleeping..." -SecondsRemaining 0 -Completed
+}
+
+function nullterm {
+    $env:term=$null
 }
 
 function Get-NextAltDir {

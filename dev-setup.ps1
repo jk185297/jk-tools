@@ -22,23 +22,24 @@ function installChocolatey {
 
 function installTools {
     choco upgrade poshgit
-    choco upgrade netfx-4.6.2-devpack
+    # choco upgrade netfx-4.6.2-devpack
     choco upgrade 7zip.install
     choco upgrade googlechrome
-    choco upgrade notepadplusplus --x86
-    choco upgrade LinkShellExtension
+    # choco upgrade notepadplusplus --x86
+    choco upgrade notepadplusplus
+    # choco upgrade LinkShellExtension
     choco upgrade vswhere
     choco upgrade nuget.commandline
-    choco upgrade conemu
+    # choco upgrade conemu
     choco upgrade vscode
-    choco upgrade beyondcompare
+    # choco upgrade beyondcompare
     choco upgrade sysinternals
 
-    choco upgrade nodejs-lts
-    $env:Path += ";$env:ProgramFiles\nodejs"
-    npm install -g npmlist
-    npm install -g grunt@0.4.5
-    npm install -g grunt-cli@1.2.0
+    # choco upgrade nodejs-lts
+    # $env:Path += ";$env:ProgramFiles\nodejs"
+    # npm install -g npmlist
+    # npm install -g grunt@0.4.5
+    # npm install -g grunt-cli@1.2.0
 }
 
 function removeDuplicatesFromPath {
