@@ -105,10 +105,10 @@ function Find-File () {
         Get-ChildItem -Recurse $($Search) | 
         ForEach-Object { 
             $result = [PSCustomObject]@{
-                FullName = $_.FullName
+                FullName      = $_.FullName
                 LastWriteTime = $_.LastWriteTime
-                Length = $_.Length
-                FileVersion = $_.VersionInfo.FileVersion
+                Length        = $_.Length
+                FileVersion   = $_.VersionInfo.FileVersion
             }
             $results += $result
         }
@@ -393,6 +393,36 @@ function Set-WindowTitle {
 }
 New-Alias title Set-WindowTitle
 
+function Get-GitEditor {
+    if ($null -eq (Get-Command "git" -ErrorAction SilentlyContinue)) { 
+        return
+    }
+    git config --global --get core.editor
+}
+
+function Set-GitEditor {
+    param ([switch]$RestoreDefault)
+
+    if ($null -eq (Get-Command "git" -ErrorAction SilentlyContinue)) { 
+        return
+    }
+
+    if ($RestoreDefault) {
+        git config core.editor vim
+        Write-Host "Git core editor restored to default"
+    }
+    else {
+        if (Test-Path "C:\Program Files (x86)\Notepad++\notepad++.exe") {
+            git config core.editor "'C:\Program Files (x86)\Notepad++\notepad++.exe' -multiInst -notabbar -nosession -noPlugin"    
+            Write-Host "Git core editor set to Notepad++"
+        }
+
+        if (Test-Path "C:\Program Files\Notepad++\notepad++.exe") {
+            git config core.editor "'C:\Program Files\Notepad++\notepad++.exe' -multiInst -notabbar -nosession -noPlugin"    
+            Write-Host "Git core editor set to Notepad++"
+        }
+    }
+}
 
 
 function Get-IISExpress {
@@ -426,7 +456,7 @@ function Start-Sleep($seconds) {
 }
 
 function nullterm {
-    $env:term=$null
+    $env:term = $null
 }
 
 function Get-NextAltDir {

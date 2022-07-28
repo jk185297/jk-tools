@@ -62,7 +62,6 @@
 	stage = add
 	standup = !me=$(git config --global --get user.name) && git log --since yesterday --oneline --author \"$me\"
 	stats = diff --stat
-	stl = stash list
 	sync = !git fetch upstream -v && git fetch origin -v && git checkout develop && git merge upstream/develop
 	tl = tag -l -n
 	tdel = "!f() { git tag --delete $1; git push --delete origin $1; }; f"
@@ -118,16 +117,17 @@
 	path = c:/Program Files/Beyond Compare 4/bcomp.exe
 	trustExitCode = true
 [difftool "sourcetree"]
-	cmd = '' \"$LOCAL\" \"$REMOTE\"
+	cmd = 'C:/Program Files/Beyond Compare 4/BComp.exe' \"$LOCAL\" \"$REMOTE\"
 [mergetool "sourcetree"]
-	cmd = "'' "
+	cmd = 'C:/Program Files/Beyond Compare 4/BComp.exe' \"$LOCAL\" \"$REMOTE\" \"$BASE\" -o \"$MERGED\"
 	trustExitCode = true
 [http]
 	sslbackend = schannel
+[checkout]
+	workers = 6
 [filter "lfs"]
 	process = git-lfs filter-process
 	required = true
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
-[checkout]
-	workers = 64
+
