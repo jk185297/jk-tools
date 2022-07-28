@@ -1,5 +1,4 @@
-﻿Import-Module C:\NCRDev\jk-tools\utils.psm1 -Force
-# Import-Module Environment -Force
+﻿# Import-Module C:\NCRDev\jk-tools\utils.psm1 -Force
 
 # Chocolatey profile
 $ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
@@ -7,10 +6,13 @@ if (Test-Path($ChocolateyProfile)) {
     Import-Module "$ChocolateyProfile" -Force
 }
 
+function IsAdmin {
+    return ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
 function prompt {
     $origLastExitCode = $LASTEXITCODE
     $adminPrefix = ""
-    # IsAdmin is a function in utils.psm1
     if (IsAdmin) {
         $adminPrefix = "Administrator: "
     } 
@@ -30,8 +32,6 @@ function prompt {
 Import-Module 'C:\tools\poshgit\dahlbyk-posh-git-9bda399\src\posh-git.psd1'
 $Global:GitPromptSettings.EnableWindowTitle = $false
 # $Global:GitPromptSettings.AfterText += "`n"
-
-# Start-SshAgent -Quiet
 
 # If rm.exe is in the path, remove default powershell rm alias
 if ($null -ne (Get-Command "rm.exe" -ErrorAction SilentlyContinue)) { 
