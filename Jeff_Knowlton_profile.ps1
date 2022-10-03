@@ -1,4 +1,4 @@
-﻿# Import-Module C:\NCRDev\jk-tools\utils.psm1 -Force
+﻿Import-Module C:\NCRDev\jk-tools\utils.psm1 -Force
 
 # Chocolatey profile
 $ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
@@ -20,7 +20,7 @@ function prompt {
     $Host.UI.RawUI.WindowTitle = "$($adminPrefix)$leaf"
     $branch = Get-GitBranch
     if ($null -ne $branch) {
-        $Host.UI.RawUI.WindowTitle = "$($adminPrefix)$leaf [$branch]"
+        $Host.UI.RawUI.WindowTitle = "$($adminPrefix)$leaf [ $branch ]"
     }
 
     Write-Host $ExecutionContext.SessionState.Path.CurrentLocation -NoNewline

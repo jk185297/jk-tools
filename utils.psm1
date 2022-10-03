@@ -4,6 +4,56 @@ function IsAdmin {
     return ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
+function ensureChocolatey {
+    if (!(Test-Path "$($env:ProgramData)\chocolatey\choco.exe")) {
+        Write-Output "installing chocolatey..."
+        try {
+            [System.Net.ServicePointManager]::SecurityProtocol = 3072; Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        }
+        catch {
+            Write-Output $_.Exception.Message
+        }
+    }
+    else {
+        Write-Output "chocolatey is already installed"
+    }
+
+    $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+    choco feature enable -n=allowGlobalevelonfirmation *> $null
+    choco feature enable -n=failOnAutoUninstaller *> $null
+    choco feature enable -n=useRememberedArgumentsForUpgrades *> $null
+}
+
+function ensureGit {
+    if ($null -eq (Get-Command "git.exe" -ErrorAction SilentlyContinue)) { 
+        ensureChocolatey
+        choco install poshgit *> $null
+    }
+}
+
+function ensureVswhere {
+    if ($null -eq (Get-Command "vswhere.exe" -ErrorAction SilentlyContinue)) { 
+        ensureChocolatey
+        choco install vswhere *> $null
+    }
+}
+
+function vsDevShell {
+    ensureVswhere
+    $vsInstallPath = vswhere -latest -property installationPath
+    if (-not $vsInstallPath) {
+        throw "Visual Studio not installed"
+    }
+
+    $devShellModule = Get-ChildItem -Path $vsInstallPath -Recurse -Include Microsoft.VisualStudio.DevShell.dll | Select-Object -ExpandProperty fullname
+    if (-not $devShellModule) {
+        throw "Unable to find VsDevShell module"
+    }
+
+    Import-Module $devShellModule -Force
+    Enter-VsDevShell -VsInstallPath $vsInstallPath -SkipAutomaticLocation
+}
+
 function ToAdmin {
     if ($Host.Version.Major -gt 1) { $Host.Runspace.ThreadOptions = "ReuseThread" }
     if (-not (IsAdmin)) {
@@ -127,6 +177,8 @@ function Get-TFCloakStatus () {
 function Get-IpAddress {
     # Get-NetIPAddress -AddressFamily IPv4 | Select-Object -Property InterfaceAlias, IPAddress
     Get-NetIPAddress -AddressFamily IPv4 | Where-Object { -not $_.IPAddress.StartsWith('169.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -Property InterfaceAlias, IPAddress
+    # Get-NetIPAddress -AddressFamily IPv4 | Where-Object { -not $_.IPAddress.StartsWith('169.') -and -not $_.IPAddress.StartsWith('192.168.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -Property InterfaceAlias, IPAddress
+    # Get-NetIPAddress -AddressFamily IPv4 | Where-Object { -not $_.IPAddress.StartsWith('169.') -and -not $_.IPAddress.StartsWith('192.168.') -and $_.IPAddress -ne '127.0.0.1' } | Select-Object -ExpandProperty IPAddress
     # Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress.StartsWith('10.') } | Select-Object -Property InterfaceAlias, IPAddress
     # [System.Net.Dns]::GetHostAddresses($env:computername) | ? { $_.AddressFamily -eq "InterNetwork" -and $_.IPAddressToString.StartsWith("10.") } | % { $_.IPAddressToString }
     # ([System.Net.Dns]::GetHostAddresses($env:computername)).IPAddressToString | ?{!$_.Contains(":") -and !$_.StartsWith("192")}
@@ -166,15 +218,7 @@ function removeDuplicatesFromPath {
 }
 
 function ensureMsbuildInPath {
-    # This depends on vswhere.exe being installed and in your path.
-    # Install it using chocolatey if you don't have it.
-    # What? You don't have chocolatey installed? Leave now! Come back when you have it installed.
-    if ($null -eq (Get-Command "vswhere.exe" -ErrorAction SilentlyContinue)) { 
-        if ($null -eq (Get-Command "choco" -ErrorAction SilentlyContinue)) { 
-            throw "This command requires 'vswhere.exe' which can be installed using chocolatey, but sadly you do not have chocolatey installed."
-        }
-        choco install vscommand *> $null
-    }
+    ensureVswhere
     # $msbuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1 | Split-Path
     $msbuildPath = vswhere -latest -find **\bin\msbuild.exe | Select-Object -Unique -First 1 | Split-Path
     $devenvPath = vswhere -latest -find **\devenv.exe | Select-Object -Unique -First 1 | Split-Path
@@ -185,6 +229,7 @@ function ensureMsbuildInPath {
 }
 
 function bfg {
+    ensureChocolatey
     java -jar "C:\ProgramData\chocolatey\lib\bfg-repo-cleaner\tools\bfg-1.13.0.jar" $args
 }
 
@@ -197,6 +242,55 @@ function mcd ([string]$Path) {
     if (Test-Path $Path) {
         Set-Location $Path
     }
+}
+
+function promoteLogOrphans {
+    Get-ChildItem -Recurse -File | Where-Object { $_.directory.name -eq $_.basename } | ForEach-Object { Move-Item $($_.FullName) $(split-path $_.directory); Remove-Item $_.directory }
+}
+
+function expandDiag {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$DiagFile
+    )
+
+    if (-not (Test-Path $DiagFile)) {
+        throw "Diag file $DiagFile doesn't exist"
+    }
+
+    $diagFileInfo = Get-ChildItem -Path $DiagFile
+    Expand-Archive $diagFileInfo.FullName
+
+    #Expand-Archive should have created a folder named after the filename without extension
+    if (-not (Test-Path $diagFileInfo.BaseName)) {
+        throw "Initial expansion failed"
+    }
+
+    Write-Output "Initial expansion successful"
+    $expanded_count = 0
+
+    $level = 0
+    do {
+        $level = $level + 1
+        Write-Output "Recurse expansion level = $level"
+    
+        $expanded_count = 0
+
+        foreach ($diag_item in (Get-ChildItem $diagFileInfo.BaseName -Recurse -Include *.zip)) {
+            $expanded_count = $expanded_count + 1
+        
+            try {
+                Expand-Archive -Path $diag_item.FullName -DestinationPath (Join-Path $diag_item.Directory.FullName $diag_item.BaseName)  
+            }
+            catch { }
+        
+            try {
+                Remove-Item $diag_item.FullName -ErrorAction SilentlyContinue
+            }
+            catch { }
+        
+        }
+    } while ($expanded_count -gt 0)
 }
 
 function vmdir {
@@ -256,7 +350,11 @@ function Get-SolutionFile {
 # New-Alias vs17 Start-VS2017
 
 function Start-VS2019 {
-    $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
+    ensureVswhere
+    $devenv = vswhere -version 16.0 -property productPath
+    if (-not $devenv) {
+        $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
+    }
     $sln = Get-SolutionFile
     & $devenv $sln
 }
@@ -284,6 +382,7 @@ function Build {
         [switch]$Rebuild, 
         [switch]$Clean, 
         [switch]$RefreshNugetPackages,
+        [switch]$MixedPlatforms,
         [switch]$Tail
     )
 
@@ -292,9 +391,12 @@ function Build {
         throw "No solutions found to build"
     }
 
-    ensureMsbuildInPath
-
-    if ($Clean) {
+    # ensureMsbuildInPath
+    if ($null -eq (Get-Command "msbuild.exe" -ErrorAction SilentlyContinue)) { 
+        vsDevShell
+    }
+    
+    if ($Clean.IsPresent) {
         Clean
     }
 
@@ -302,8 +404,11 @@ function Build {
     $config = "Debug"
     # $platform = "x64"
     $platform = $null
+    if ($MixedPlatforms.IsPresent) {
+        $platform = "Mixed Platforms"
+    }
 
-    if ($Release) {
+    if ($Release.IsPresent) {
         $config = "Release"
     }
 
@@ -314,7 +419,7 @@ function Build {
     #     }
     # }
 
-    if ($RefreshNugetPackages) {
+    if ($RefreshNugetPackages.IsPresent) {
         Update-NugetPackages
     }
     else {
@@ -359,21 +464,37 @@ function gitBash {
 }
 New-Alias gb gitBash
 
-function whereis {
-    $cmd = "where.exe"
-    & $cmd $args
-}
-New-Alias whence whereis
-
-# function whence {
-#     return "$((Get-Command $args[0] -ErrorAction SilentlyContinue).Definition)"
-# }
-
-# function msbuild {
-#     $cmd = Get-ChildItem -path 'C:\Program Files (x86)\Microsoft Visual Studio' -Recurse msbuild.exe | Sort-Object $_.FullName -Descending | Select-Object -First 1 | %{$_.FullName}
-#     # $cmd = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\MSBuild\15.0\Bin\MSBuild.exe"
+# function whereis {
+#     $cmd = "where.exe"
 #     & $cmd $args
 # }
+# New-Alias whence whereis
+
+
+function Find-NotePadPlusPlus {
+    param ([switch]$InstallIfMissing)
+
+    ensureGit
+
+    $nppExe = $null
+    $npp_x86 = "${env:ProgramFiles(x86)}\Notepad++\notepad++.exe"
+    $npp_x64 = "$env:ProgramFiles\Notepad++\notepad++.exe"
+    
+    if (Test-Path $npp_x86) {
+        $nppExe = $npp_x86
+    }
+    
+    if (Test-Path $npp_x64) {
+        $nppExe = $npp_x64
+    }
+
+    if ($null -eq $nppExe -and $InstallIfMissing) {
+        choco install notepadplusplus *> $null
+        $nppExe = $npp_x64
+    }
+
+    return $nppExe
+}
 
 function Start-NotepadPlusPlus {
     if (Test-Path "C:\Program Files (x86)\Notepad++\notepad++.exe") {
@@ -394,34 +515,29 @@ function Set-WindowTitle {
 New-Alias title Set-WindowTitle
 
 function Get-GitEditor {
-    if ($null -eq (Get-Command "git" -ErrorAction SilentlyContinue)) { 
-        return
-    }
-    git config --global --get core.editor
+    ensureGit
+    $gitEditor = git config --get core.editor
+    Write-Output "git core.editor = '$gitEditor'"
 }
 
 function Set-GitEditor {
-    param ([switch]$RestoreDefault)
+    param ([switch]$vim)
 
-    if ($null -eq (Get-Command "git" -ErrorAction SilentlyContinue)) { 
-        return
+    $RestoreDefault = $vim.IsPresent
+    ensureGit
+
+    $nppExe = Find-NotePadPlusPlus
+    if (-not $nppExe) {
+        $RestoreDefault = $true
     }
 
     if ($RestoreDefault) {
         git config core.editor vim
-        Write-Host "Git core editor restored to default"
     }
     else {
-        if (Test-Path "C:\Program Files (x86)\Notepad++\notepad++.exe") {
-            git config core.editor "'C:\Program Files (x86)\Notepad++\notepad++.exe' -multiInst -notabbar -nosession -noPlugin"    
-            Write-Host "Git core editor set to Notepad++"
-        }
-
-        if (Test-Path "C:\Program Files\Notepad++\notepad++.exe") {
-            git config core.editor "'C:\Program Files\Notepad++\notepad++.exe' -multiInst -notabbar -nosession -noPlugin"    
-            Write-Host "Git core editor set to Notepad++"
-        }
+        git config core.editor "'$nppExe' -multiInst -notabbar -nosession -noPlugin"
     }
+    Get-GitEditor
 }
 
 
@@ -444,6 +560,21 @@ function Get-IISExpress {
 #     # $results
 # }
 
+function UnzipAll {
+    if ($null -eq (Get-Command "7z" -ErrorAction SilentlyContinue)) { 
+        return
+    }
+
+    Get-ChildItem -Recurse -Include *.zip | ForEach-Object {
+        $params = @("x", "`"$($_.FullName)`"", "-o`"$($_.FullName.TrimEnd('.zip'))`"", "-y");
+        $ex = Start-Process 7z -ArgumentList $params -NoNewWindow -Wait -PassThru
+        if ($ex.ExitCode -eq 0) {
+            write-host "Extraction successful, deleting $($_.FullName)"
+            Remove-Item -Path $_.FullName -Force
+        }
+    }
+}
+
 function Start-Sleep($seconds) {
     $doneDT = (Get-Date).AddSeconds($seconds)
     while ($doneDT -gt (Get-Date)) {
@@ -453,6 +584,11 @@ function Start-Sleep($seconds) {
         [System.Threading.Thread]::Sleep(500)
     }
     Write-Progress -Activity "Sleeping" -Status "Sleeping..." -SecondsRemaining 0 -Completed
+}
+
+function setterm() {
+    param ([int]$term = 1)
+    $env:term = $term
 }
 
 function nullterm {

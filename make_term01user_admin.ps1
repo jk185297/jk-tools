@@ -1,0 +1,1 @@
+net localgroup administrators Term01User /add

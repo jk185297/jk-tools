@@ -1,3 +1,8 @@
+param (
+    [Parameter()]
+    [int] $DaysOffset = 0
+)
+
 function UpdateAlohaIniFile {
     param (
         [string]$filePath,
@@ -7,6 +12,7 @@ function UpdateAlohaIniFile {
     (Get-Content $filePath) | ForEach-Object { $_ -replace "DOB=.*","DOB=$dateOfBusiness" } | Set-Content $filePath
 }
 
+# null coalesce powershell style
 $iberdir = @($env:IBERDIR, $env:LOCALDIR, 'C:\BOOTDRV\Aloha') | Select-Object -First 1
 if (!(Test-Path $iberdir)) {
     throw "$iberdir does not exist"
@@ -22,7 +28,8 @@ if (!(Test-Path $aloha2)) {
     throw "$aloha2 does not exist"
 }
 
-$dob_today = (Get-Date).ToString("MM dd yyyy")
+$dob = (Get-Date).AddDays($DaysOffset).ToString("MM dd yyyy")
 
-UpdateAlohaIniFile $aloha1 $dob_today
-UpdateAlohaIniFile $aloha2 $dob_today
+UpdateAlohaIniFile $aloha1 $dob
+UpdateAlohaIniFile $aloha2 $dob
+"Updated Aloha.ini to '$dob'"

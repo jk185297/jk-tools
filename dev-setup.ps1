@@ -59,7 +59,7 @@ function setupDeveloperPath {
         if ($null -eq (Get-Command "choco" -ErrorAction SilentlyContinue)) { 
             installChocolatey
         }
-        choco install vscommand *> $null
+        choco install vswhere *> $null
     }
 
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'

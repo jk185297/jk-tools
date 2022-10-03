@@ -1,0 +1,1 @@
+move "\\alohadev1.local\c$\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\Aloha Terminal Configuration.lnk" "\\alohadev1.local\c$\Users\Term01User\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\Aloha Terminal Configuration.lnk"
