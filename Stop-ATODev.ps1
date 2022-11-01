@@ -1,3 +1,3 @@
-gsv *takeout*|spsv
-gsv CtlSvr|spsv
-ps iber*,rad*,*kit*,ocp*,*testcmc*|kill -Force
+Get-Service *takeout*|Stop-Service
+Get-Service CtlSvr|Stop-Service
+Get-Process iber*,rad*,*kit*,ocp*,*testcmc*|Stop-Process -Force
