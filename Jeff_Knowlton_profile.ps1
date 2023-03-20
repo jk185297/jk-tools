@@ -1,4 +1,4 @@
-﻿# Import-Module C:\NCRDev\jk-tools\utils.psm1 -Force
+﻿# Import-Module "$env:home\source\repos\jk-tools\utils.psm1" -Force
 
 # Chocolatey profile
 $ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
