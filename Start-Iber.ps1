@@ -1,1 +1,0 @@
-. C:\BootDrv\Aloha\BIN\iber.exe TERM 1

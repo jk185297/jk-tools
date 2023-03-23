@@ -1,1 +1,0 @@
-get-process iberqs | stop-process
