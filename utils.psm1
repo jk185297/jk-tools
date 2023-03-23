@@ -341,7 +341,7 @@ function Build {
 
     if ($PSCmdlet.ShouldProcess($sln, "$cmd $params")) {
         if ($Tail) {
-            Start-Process -FilePath "C:\NCRDev\jk-tools\baretailpro.exe" -ArgumentList ".\msbuild.log"
+            Start-Process -FilePath "$env:home/source/repos/jk-tools/baretailpro.exe" -ArgumentList ".\msbuild.log"
         }
         & $cmd $params
         if ($LastExitCode -ne 0) {
