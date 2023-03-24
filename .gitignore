@@ -324,9 +324,8 @@ ASALocalRun/
 *.binlog
 
 healthcheckStatusParallel.txt
-<<<<<<< HEAD
 *.exe
-=======
 *.installlog
 *.installstate
->>>>>>> develop
+
+BC4Settings_1234/
