@@ -25,21 +25,26 @@ function installTools {
     #choco upgrade netfx-4.6.2-devpack
     #choco upgrade netfx-4.7.1-devpack
     choco upgrade 7zip.install
+    choco upgrade vscode
     choco upgrade googlechrome
     choco upgrade notepadplusplus
     # choco upgrade LinkShellExtension
     #choco upgrade vswhere
     #choco upgrade nuget.commandline
     # choco upgrade conemu
-    choco upgrade vscode
     choco upgrade beyondcompare
     choco upgrade sysinternals
     #choco upgrade visualstudio2019professional
     #choco upgrade visualstudio2019-remotetools
     #choco upgrade microsoft-windows-terminal
-    #choco upgrade NugetPackageExplorer
+    choco upgrade NugetPackageExplorer
     choco upgrade Everything
+    choco upgrade vcredist2010
 
+    # choco upgrade sql-server-2022
+    # choco upgrade sql-server-management-studio
+
+    ### Front-end Dev Tools ###
     # choco upgrade nodejs-lts
     # $env:Path += ";$env:ProgramFiles\nodejs"
     # npm install -g npmlist
@@ -59,7 +64,7 @@ function setupDeveloperPath {
         if ($null -eq (Get-Command "choco" -ErrorAction SilentlyContinue)) { 
             installChocolatey
         }
-        choco install vscommand *> $null
+        choco install vswhere *> $null
     }
 
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
