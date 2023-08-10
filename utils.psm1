@@ -165,19 +165,30 @@ function removeDuplicatesFromPath {
     refreshEnv *> $null
 }
 
-function ensureMsbuildInPath {
-    # This depends on vswhere.exe being installed and in your path.
-    # Install it using chocolatey if you don't have it.
-    # What? You don't have chocolatey installed? Leave now! Come back when you have it installed.
+function ensureVsWhere {
     if ($null -eq (Get-Command "vswhere.exe" -ErrorAction SilentlyContinue)) { 
         if ($null -eq (Get-Command "choco" -ErrorAction SilentlyContinue)) { 
             throw "This command requires 'vswhere.exe' which can be installed using chocolatey, but sadly you do not have chocolatey installed."
         }
-        choco install vscommand *> $null
+        choco install vswhere *> $null
     }
+}
+
+function ensureMsbuildInPath {
+    # This depends on vswhere.exe being installed and in your path.
+    # Install it using chocolatey if you don't have it.
+    # What? You don't have chocolatey installed? Leave now! Come back when you have it installed.
+    # if ($null -eq (Get-Command "vswhere.exe" -ErrorAction SilentlyContinue)) { 
+    #     if ($null -eq (Get-Command "choco" -ErrorAction SilentlyContinue)) { 
+    #         throw "This command requires 'vswhere.exe' which can be installed using chocolatey, but sadly you do not have chocolatey installed."
+    #     }
+    #     choco install vswhere *> $null
+    # }
+    ensureVsWhere
     # $msbuildPath = vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1 | Split-Path
     $msbuildPath = vswhere -latest -find **\bin\msbuild.exe | Select-Object -Unique -First 1 | Split-Path
-    $devenvPath = vswhere -latest -find **\devenv.exe | Select-Object -Unique -First 1 | Split-Path
+    # $devenvPath = vswhere -latest -find **\devenv.exe | Select-Object -Unique -First 1 | Split-Path
+    $devenvPath = vswhere -latest -property productPath
     $path = (([System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)).replace(';;', ';').split(';') | Select-Object -Unique) -join ';'
     $newPath = "$msbuildPath;$devenvPath;$path"
     [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
@@ -256,12 +267,35 @@ function Get-SolutionFile {
 # New-Alias vs17 Start-VS2017
 
 function Start-VS2019 {
-    $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
-    $sln = Get-SolutionFile
-    & $devenv $sln
+    ensureVsWhere
+    # $devenv = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\devenv.exe"
+    $devenv = vswhere -property productPath | Where-Object { $_.contains('2019') }
+    if ($devenv) {
+        $sln = Get-SolutionFile
+        & $devenv $sln
+    }
 }
 New-Alias vs19 Start-VS2019
-New-Alias vs Start-VS2019
+
+function Start-VS2022 {
+    ensureVsWhere
+    $devenv = vswhere -property productPath | Where-Object { $_.contains('2022') }
+    if ($devenv) {
+        $sln = Get-SolutionFile
+        & $devenv $sln
+    }
+}
+New-Alias vs22 Start-VS2022
+
+function Start-VSLatest {
+    ensureVsWhere
+    $devenv = vswhere -latest -property productPath
+    if ($devenv) {
+        $sln = Get-SolutionFile
+        & $devenv $sln
+    }
+}
+New-Alias vs Start-VSLatest
 
 function Clean {
     [CmdletBinding(SupportsShouldProcess)]
