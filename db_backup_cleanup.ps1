@@ -1,0 +1,1 @@
+ls -Recurse -File -Include '*.dif','*.bak' | ?{$_.LastWriteTime -lt (get-date).adddays(-60)} | rm

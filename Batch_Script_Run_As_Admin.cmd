@@ -14,7 +14,7 @@ goto :eof
 
 ::ENTER YOUR CODE BELOW::   
 
-
+choco upgrade all
 
 
 
